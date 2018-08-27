@@ -16,6 +16,27 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+
+/** pattern
+ * %n  --  logger name
+ * %l  --  short level str
+ * %t  --  thread id
+ * %c  --  Mon Aug 2716:22:42
+ * %C  --  year 2 bits
+ * %D  --  Short MM/DD/YY date, equivalent to %m/%d/%y 08/23/01
+ * %Y  --  year 4 bits
+ * %m  --  month
+ * %d  --  day of month 1-31
+ * %H  --  hours in 24 format 0-23
+ * %I  --  hours in 12 format 1-12
+ * %M  --  minutes 0-59
+ * %S  --  seconds 0-59
+ * %e  --  milliseconds
+ * %P  --  process id
+ * %T  --  2018/08/27 16:23:17
+ * the default pattern is "[%l %T.%e %t]", e.
+ *      loge("HELLO") outputs is  [E 2018/08/27 16:29:43.355 388936] HELLO
+ */
 #ifndef DM_HEADER_H
 #define DM_HEADER_H
 #include <atomic>
@@ -40,7 +61,7 @@
 #include "utils/colors.h"
 
 #define DEFAULT_LOG_NAME "default"
-#define DEFAULT_LOG_PATTERN "%T.%e"
+#define DEFAULT_LOG_PATTERN "[%l %T.%e %t]"
 
 namespace dm {
 
@@ -89,6 +110,7 @@ struct log_msg {
 
         pthread_threadid_np(nullptr, &thread_id_);
     }
+
     ~log_msg() {
         raw_.clear();
     }
@@ -603,7 +625,6 @@ extern void create(const char *log_name, const char *pattern, dm::init_list list
 
 extern void log_init() {
 }
-
 }	  // namespace dm
 
 #define log(logger_name, lvl) dm::logger_helper::instance()(logger_name, lvl)
@@ -639,8 +660,36 @@ do {\
 #ifndef NDEBUG
 #define dlog(fmt, ...)\
 dlogi_goto(fmt, LOG_GOTO_FMT, __FILENAME__, __LINE__, __VA_ARGS__)
+
+namespace dm {
+#define LOG_TRACE_FMT "[%s/%s:%d] "
+#define LOG_TRACE_FMT_LEAVE "[%s:%s] "
+#define FUNC_ENTRY    "ENTRY"
+#define FUNC_LEAVE    "leave"
+struct log_trace {
+    log_trace(const char *file, const char *func, int line) : file_(file), func_(func), line_(line) {
+        dm::basic_memory_buffer buf;
+        dm::fmt::format_to(buf, LOG_TRACE_FMT, file, func, line);
+        dlogi("%s\n", buf, FUNC_ENTRY);
+    }
+
+    ~log_trace() {
+        dm::basic_memory_buffer buf;
+        dm::fmt::format_to(buf, LOG_TRACE_FMT_LEAVE, file_.c_str(), func_.c_str());
+        dlogi("%s\n", buf, FUNC_LEAVE);
+    }
+
+    std::string file_;
+    std::string func_;
+    int line_;
+};
+}
+
+#define LOG_FUNC_TRACE()\
+dm::log_trace __lt(__FILENAME__, __FUNCTION__, __LINE__)
 #else
 #define dlog(fmt, ...)
+#define LOG_FUNC_TRACE()
 #endif
 
 #endif	// DM_HEADER_H

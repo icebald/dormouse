@@ -2,9 +2,13 @@
 #include <iostream>
 #include "log/log.h"
 
-int main(int argc, char *argv[]) {
-    dm::set_pattern(DEFAULT_LOG_NAME, "%T.%e");
+void test() {
+    LOG_FUNC_TRACE();
 
+    int a = 0;
+}
+
+int main(int argc, char *argv[]) {
     dloge("asdf %s %d tt\n", "HELLO", 123);
     int a = 123;
     dlogd("test d %d\n", a);
@@ -16,5 +20,7 @@ int main(int argc, char *argv[]) {
     dm::sink_ptr sink(new dm::sinks::basic_file_sink_st("test.log"));
     dm::create("test", "%T.%e", {sink});
     logt("test", "ss %s\n", "HELLO");
+    test();
+
     return 0;
 }
