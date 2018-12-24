@@ -1,26 +1,23 @@
 
 #include <iostream>
+#include <functional>
+#include "concurrent/looper.h"
 #include "log/log.h"
+#include "concurrent/dispatch.h"
+#include "net/net_dispatch.h"
 
-void test() {
-    LOG_FUNC_TRACE();
-
-    int a = 0;
-}
-
+class test {
+public:
+    void testFunc() {
+        LOG_FUNC_TRACE();
+    }
+};
 int main(int argc, char *argv[]) {
-    dloge("asdf %s %d tt\n", "HELLO", 123);
-    int a = 123;
-    dlogd("test d %d\n", a);
-    dlogi("test short %hd\n", (short)123);
-    dlogw("test float %f\n", 12.00101);
-    dlogt("test ... %d\n", 443);
-    dlog("test %s", "HELLO\n");
-
-    dm::sink_ptr sink(new dm::sinks::basic_file_sink_st("test.log"));
-    dm::create("test", "%T.%e", {sink});
-    logt("test", "ss %s\n", "HELLO");
-    test();
-
-    return 0;
+    dm::concurrent::looper::prepare_main_looper();
+    dm::concurrent::dispatch dispatch;
+    dispatch.start();
+    test a;
+    dispatch.post(std::bind(&test::testFunc, &a));
+    dispatch.stop();
+    return dm::concurrent::looper::loop();
 }

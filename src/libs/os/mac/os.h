@@ -13,15 +13,6 @@ namespace details {
 constexpr static const char folder_sep = '/';
 }
 
-inline bool fopen_s(FILE **fp, const std::string &filename, const std::string &mode) {
-    *fp = fopen((filename.c_str()), mode.c_str());
-    return *fp == nullptr;
-}
-
-inline void sleep_for_millis(int milliseconds) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
-}
-
 inline size_t filesize(FILE *f) {
     if (f == nullptr) {
         throw std::runtime_error("Failed getting file size. fd is null");

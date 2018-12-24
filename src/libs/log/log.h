@@ -108,7 +108,7 @@ struct log_msg {
         auto tt = std::chrono::system_clock::to_time_t(time_point_);
         tm_time_ = dm::details::localtime(tt);
 
-        pthread_threadid_np(nullptr, &thread_id_);
+        //pthread_threadid_np(nullptr, &thread_id_);
     }
 
     ~log_msg() {
@@ -662,14 +662,14 @@ do {\
 dlogi_goto(fmt, LOG_GOTO_FMT, __FILENAME__, __LINE__, __VA_ARGS__)
 
 namespace dm {
-#define LOG_TRACE_FMT "[%s/%s:%d] "
+#define LOG_TRACE_FMT "[%s:%d %s] "
 #define LOG_TRACE_FMT_LEAVE "[%s:%s] "
 #define FUNC_ENTRY    "ENTRY"
 #define FUNC_LEAVE    "leave"
 struct log_trace {
     log_trace(const char *file, const char *func, int line) : file_(file), func_(func), line_(line) {
         dm::basic_memory_buffer buf;
-        dm::fmt::format_to(buf, LOG_TRACE_FMT, file, func, line);
+        dm::fmt::format_to(buf, LOG_TRACE_FMT, file, line, func);
         dlogi("%s\n", buf, FUNC_ENTRY);
     }
 

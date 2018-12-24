@@ -9,6 +9,11 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/libs/os)
 if (APPLE)
     set(OS_NAME "mac")
 endif()
+
+if (CMAKE_SYSTEM_NAME MATCHES "Linux")
+    set(OS_NAME "linux")
+endif()
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/libs/os/${OS_NAME})
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test)

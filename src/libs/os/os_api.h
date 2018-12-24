@@ -20,4 +20,20 @@
 #ifndef DM_OD_API_H
 #define DM_OD_API_H
 #include "os.h"
+
+namespace dm {
+namespace os {
+
+inline bool fopen_s(FILE **fp, const std::string &filename, const std::string &mode) {
+    *fp = fopen((filename.c_str()), mode.c_str());
+    return *fp == nullptr;
+}
+
+inline void sleep_for_millis(int milliseconds) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
+}
+
+}
+}
+
 #endif	// DM_OD_API_H

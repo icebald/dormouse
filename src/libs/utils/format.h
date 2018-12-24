@@ -152,17 +152,38 @@ struct no_thousands_sep {
     void operator()(Char *) { }
 };
 
+#ifdef FMT_BUILTIN_CLZLL
+            // Returns the number of decimal digits in n. Leading zeros are not counted
+// except for n == 0 in which case count_digits returns 1.
 inline unsigned count_digits(uint64_t n) {
-    // Based on http://graphics.stanford.edu/~seander/bithacks.html#IntegerLog10
-    // and the benchmark https://github.com/localvoid/cxx-benchmark-count-digits.
-    int t = (64 - FMT_BUILTIN_CLZLL(n | 1)) * 1233 >> 12;
-    return to_unsigned(t) - (n < data::POWERS_OF_10_64[t]) + 1;
+  // Based on http://graphics.stanford.edu/~seander/bithacks.html#IntegerLog10
+  // and the benchmark https://github.com/localvoid/cxx-benchmark-count-digits.
+  int t = (64 - FMT_BUILTIN_CLZLL(n | 1)) * 1233 >> 12;
+  return to_unsigned(t) - (n < data::POWERS_OF_10_64[t]) + 1;
 }
+#else
+inline unsigned count_digits(uint64_t n) {
+    unsigned count = 1;
+    for (;;) {
+        // Integer division is slow so do it for a group of four digits instead
+        // of for every digit. The idea comes from the talk by Alexandrescu
+        // "Three Optimization Tips for C++". See speed-test for a comparison.
+        if (n < 10) return count;
+        if (n < 100) return count + 1;
+        if (n < 1000) return count + 2;
+        if (n < 10000) return count + 3;
+        n /= 10000u;
+        count += 4;
+    }
+}
+#endif
 
+#ifdef FMT_BUILTIN_CLZ
 inline unsigned count_digits(uint32_t n) {
     int t = (32 - FMT_BUILTIN_CLZ(n | 1)) * 1233 >> 12;
     return to_unsigned(t) - (n < data::POWERS_OF_10_32[t]) + 1;
 }
+#endif
 
 template<typename UInt, typename Char, typename ThousandsSep>
 inline Char *format_decimal(Char *buffer, UInt value, unsigned num_digits, ThousandsSep thousands_sep)
@@ -543,9 +564,21 @@ int vformat(
             len = 1;
             break;
         }
+        case 'b' : {
+            buffer.input_bool(dm::any_cast<bool>(arg));
+            ++(*index);
+            len = 1;
+            break;
+        }
         // 字符串
         case 's': {
-            const char *v = dm::any_cast<const char *>(arg);
+            const char *v = nullptr;
+            try {
+                v = dm::any_cast<const char *>(arg);
+            } catch (dm::dm_error e) {
+                v = dm::any_cast<char *>(arg);
+            }
+
             buffer.append(v, strlen(v));
             ++(*index);
             len = 1;

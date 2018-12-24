@@ -20,6 +20,7 @@
 #define DM_MEMORY_BUFFER_H
 #include <string>
 #include <iostream>
+#include <cstring>
 
 namespace dm {
 class basic_memory_buffer {
@@ -62,6 +63,12 @@ public:
         std::memcpy(buffer_ + pos_, s, len);
         pos_ += len;
         return *this;
+    }
+
+    inline basic_memory_buffer &input_bool(bool b) {
+        const char *buf[2] = {"true", "false"};
+        int type = b ? 0 : 1;
+        *this<<buf[type];
     }
 
     inline basic_memory_buffer &operator<<(const std::string s) {
