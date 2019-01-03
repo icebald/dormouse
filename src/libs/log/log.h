@@ -112,6 +112,10 @@ struct log_msg {
     }
 
     ~log_msg() {
+        clear();
+    }
+
+    void clear() {
         raw_.clear();
     }
 
@@ -287,6 +291,7 @@ static void compile_pattern(details::log_msg &msg, const std::string &pattern) {
         }
         msg.raw_ << *it;
     }
+    msg.raw_ << ' ';
 }
 
 static bool handle_flag(details::log_msg &msg, char flag) {
@@ -444,6 +449,7 @@ private:
 };
 
 using basic_file_sink_st = basic_file_sink<dm::null_mutex>;
+using basic_file_sink_mt = basic_file_sink<std::mutex>;
 
 }	  // namespace sinks
 
@@ -454,13 +460,16 @@ using sink_array_it = sink_array::iterator;
 using sink_map = std::map<std::string, sink_array>;
 using sink_map_it = sink_map::iterator;
 
+const char *logend = "\n";
+
 class logger {
 public:
-    logger() : can_log_(false) {
-    }
+    logger() : can_log_(false) {}
     logger(const std::string &pattern, const char *name,
-           sink_array &array, dm::level::level_enum lvl) 
-        : pattern_(pattern), name_(name), sinks_(array), can_log_(true), level_(lvl) {}
+           sink_array &array, dm::level::level_enum lvl)
+            : pattern_(pattern), name_(name), sinks_(array), can_log_(true), level_(lvl) {
+    }
+
     logger &operator()(dm::level::level_enum lvl) {
         return *this;
     }
@@ -470,7 +479,6 @@ public:
         if (!can_log_) return;
         details::log_msg msg(name_.c_str(), level_);
         details::formatter::compile_pattern(msg, pattern_);
-        msg.raw_ << ' ';
         dm::fmt::format_to(msg.raw_, fmt, args...);
         std::for_each(sinks_.begin(), sinks_.end(), [&](const sink_ptr sink) {
             sink->log(msg);
@@ -482,7 +490,6 @@ public:
         if (!can_log_) return;
         details::log_msg msg(name_.c_str(), level_);
         details::formatter::compile_pattern(msg, pattern_);
-        msg.raw_ << ' ';
         msg.raw_ << buffer;
         dm::fmt::format_to(msg.raw_, fmt, args...);
         std::for_each(sinks_.begin(), sinks_.end(), [&](const sink_ptr sink) {
@@ -492,9 +499,28 @@ public:
 
     logger &operator<<(const char *val) {
         if (!can_log_) return *this;
-        std::cout<<val;
+        details::log_msg msg(name_.c_str(), level_);
+        details::formatter::compile_pattern(msg, pattern_);
+        msg.raw_ << val;
+
+        std::for_each(sinks_.begin(), sinks_.end(), [&](const sink_ptr sink) {
+            sink->log(msg);
+        });
         return *this;
     }
+
+    logger &operator<<(int val) {
+        if (!can_log_) return *this;
+        details::log_msg msg(name_.c_str(), level_);
+        details::formatter::compile_pattern(msg, pattern_);
+        msg.raw_ << val;
+
+        std::for_each(sinks_.begin(), sinks_.end(), [&](const sink_ptr sink) {
+            sink->log(msg);
+        });
+        return *this;
+    }
+
 private:
     std::string name_;
     std::string pattern_;
@@ -570,8 +596,9 @@ protected:
     }
 
     logger_helper() : level_(dm::level::trace), null_log_() {
-        dm::sink_ptr locak_sink(new dm::sinks::ascii_color_sink_mt(stdout));
-        create(DEFAULT_LOG_NAME, {locak_sink});
+        dm::sink_ptr local_sink(new dm::sinks::ascii_color_sink_mt(stdout));
+        dm::sink_ptr file_sink(new dm::sinks::basic_file_sink_mt("./log.h"));
+        create(DEFAULT_LOG_NAME, {local_sink, file_sink});
     }
 
     bool should_log(dm::level::level_enum msg_level) const {
@@ -663,9 +690,8 @@ dlogi_goto(fmt, LOG_GOTO_FMT, __FILENAME__, __LINE__, __VA_ARGS__)
 
 namespace dm {
 #define LOG_TRACE_FMT "[%s:%d %s] "
-#define LOG_TRACE_FMT_LEAVE "[%s:%s] "
-#define FUNC_ENTRY    "ENTRY"
-#define FUNC_LEAVE    "leave"
+#define FUNC_ENTRY    "E"
+#define FUNC_LEAVE    "L"
 struct log_trace {
     log_trace(const char *file, const char *func, int line) : file_(file), func_(func), line_(line) {
         dm::basic_memory_buffer buf;
@@ -675,7 +701,7 @@ struct log_trace {
 
     ~log_trace() {
         dm::basic_memory_buffer buf;
-        dm::fmt::format_to(buf, LOG_TRACE_FMT_LEAVE, file_.c_str(), func_.c_str());
+        dm::fmt::format_to(buf, LOG_TRACE_FMT, file_.c_str(), line_, func_.c_str());
         dlogi("%s\n", buf, FUNC_LEAVE);
     }
 

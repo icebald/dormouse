@@ -37,15 +37,33 @@ public:
     }
 
     template <typename _Func, typename ...Args>
-    void post(_Func&& __f, Args&&... __args) {
+    msg_ptr post(_Func&& __f, Args&&... __args) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (!handler_ && not_init_.wait_for(mutex_, std::chrono::seconds(2)) == std::cv_status::timeout) {
+            throw dm::dm_error("dispatch not start.");
+        }
+        return handler_->post(__f, __args...);
+    }
+
+    template <typename _Func, typename _Rep, typename _Period, typename ...Args>
+    msg_ptr post_delayed(_Func&& __f, const std::chrono::duration<_Rep, _Period> &time, Args&&... __args) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (!handler_ && not_init_.wait_for(mutex_, std::chrono::seconds(2)) == std::cv_status::timeout) {
+            throw dm::dm_error("dispatch not start.");
+        }
+        if (time.count() == 0) {
+            return handler_->post(__f, __args...);
+        }
+        return handler_->post_delayed(__f, time, __args...);
+    }
+
+    void remove(msg_ptr msg) {
         std::lock_guard<std::mutex> lock(mutex_);
         while (!handler_) {
             not_init_.wait(mutex_);
         }
-        msg_ptr msg = make_message(dm::util::invoke::__make_invoker(std::forward<_Func>(__f), std::forward<Args>(__args)...));
-        handler_->post(msg);
+        handler_->remove(msg);
     }
-
 protected:
 
     void run() {

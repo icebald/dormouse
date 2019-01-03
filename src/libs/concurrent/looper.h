@@ -7,6 +7,7 @@
 
 #include <memory>
 #include <mutex>
+#include <utils/invoker.h>
 #include "concurrent/message_queue.h"
 #include "concurrent/message.h"
 #include "log/log.h"
@@ -60,6 +61,11 @@ public:
         while (true) {
             msg_ptr msg = my_looper_->msgs_->pop();
             try {
+                if (msg->is_cancle()) {
+                    my_looper_->remove(msg);
+                    continue;
+                }
+
                 msg->_M_run();
             } catch (std::system_error e) {
                 if (e.code().value() == 0) {
@@ -70,13 +76,35 @@ public:
         }
         return 0;
     }
+
     msg_queue *get_queue() {
         return msgs_;
     }
 
     void quit() {
         msgs_->quit();
+        post([]() -> void {throw std::system_error(std::error_code()); });
     }
+
+    template <typename _Func, typename ...Args>
+    msg_ptr post(_Func&& __f, Args&&... __args) {
+        msg_ptr msg = make_message(dm::util::invoke::__make_invoker(std::forward<_Func>(__f), std::forward<Args>(__args)...));
+        msgs_->push(msg);
+        return msg;
+    }
+
+    template <typename _Func, typename _Rep, typename _Period, typename ...Args>
+    msg_ptr post_delayed(_Func&& __f, const std::chrono::duration<_Rep, _Period> &time, Args&&... __args) {
+        msg_ptr msg = make_message(dm::util::invoke::__make_invoker(std::forward<_Func>(__f), std::forward<Args>(__args)...), time);
+        msgs_->push_delayed(msg);
+        return msg;
+    }
+
+    void remove(msg_ptr msg) {
+        msg->cancle();
+        msgs_->remove(msg);
+    }
+
 private:
     static thread_local looper_ptr my_looper_;
     static looper_ptr main_looper_;

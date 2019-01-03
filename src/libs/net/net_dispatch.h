@@ -38,6 +38,7 @@ protected:
     static void listener_cb(struct evconnlistener *listener, evutil_socket_t fd, struct sockaddr *addr, int socklen, void *arg) {
         ((net_dispatch *)arg)->do_listener(fd);
     }
+
     static void socket_read_cb(struct bufferevent *bev, void *ctx) {
         char msg[4096];
 
@@ -49,6 +50,7 @@ protected:
         char reply[] = "I has read your data";
         bufferevent_write(bev, reply, strlen(reply) );
     }
+
     static void socket_event_cb(struct bufferevent *bev, short what, void *ctx) {
 
     }
