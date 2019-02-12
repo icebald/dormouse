@@ -1,6 +1,8 @@
 #ifndef ADBHELPER_H
 #define ADBHELPER_H
 
+#include "dev/device.h"
+
 #include <QString>
 
 const QString LIST_DEVICE = "adb -d devices -l";
@@ -10,7 +12,7 @@ const QString LOGCAT = "adb -s %1 logcat |grep %2";
 const QString GET_VERSION = "adb version";
 
 struct AdbHelper {
-    static QString excue(const QString &cmd);
+    static QString excue(const QString &cmd, int time = 2 * 1000);
 };
 
 #endif // ADBHELPER_H

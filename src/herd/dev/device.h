@@ -4,6 +4,7 @@
 #include <QEvent>
 #include <memory>
 #include <QList>
+#include <QThread>
 
 struct Progress {
     QString name;
@@ -14,7 +15,8 @@ struct Progress {
     }
 };
 
-class device
+class QProcess;
+class device : public QThread
 {
 public:
     explicit device(const QString &name);
@@ -36,14 +38,23 @@ public:
     QList<Progress> &getProgress() { return mProgress; }
     void setCurrentProgress(int index) { mCurrentProgress = index; }
     const Progress &getCurrentProgress() { return mProgress.at(mCurrentProgress); }
+
+    void run() override;
+    void catLogcat();
+    void stop();
+
+private slots:
+    void ReadyRead(void);
 private:
     void addProgress(QStringList &pids);
 private:
+    bool mIsRun;
     int mCurrentProgress;
     QString mSerialNumber;
     QString mProduct;
     QString mModel;
     QString mDevice;
+    QProcess *mP;
     QList<Progress> mProgress;
 };
 typedef std::shared_ptr<device> dev_ptr;

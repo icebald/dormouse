@@ -33,7 +33,7 @@ class SetSelectDevEvent : public QEvent {
 public:
     explicit SetSelectDevEvent(dev_ptr dev) : QEvent(SET_SELECT_DEV), mDev(dev) {}
 
-    dev_ptr getVersion() { return mDev; }
+    dev_ptr getDev() { return mDev; }
 private:
     dev_ptr mDev;
 };

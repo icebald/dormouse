@@ -29,6 +29,7 @@ private:
     void initDevices();
     void initEdit();
     void refreshDevices(const QList<dev_ptr> &devices);
+    void selectDevice(dev_ptr dev);
 
     QStatusBar *mStatusBar;
     QDockWidget *mDockLeft;

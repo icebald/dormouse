@@ -96,14 +96,20 @@ void MainWindow::setAdbVersion(QString version) {
     statusBar()->showMessage(version);
 }
 
+void MainWindow::selectDevice(dev_ptr dev) {
+    dev->catLogcat();
+}
+
 bool MainWindow::event(QEvent *ev) {
     if (ev->type() == REFRESH_DEVICE) {
         refreshDevices(((DeviceEvent*) ev)->getDev());
         return true;
     } else if (ev->type() == ADB_VERSION) {
         setAdbVersion(((VersionEvent *) ev)->getVersion());
+        return true;
     } else if (ev->type() == SET_SELECT_DEV) {
-
+        selectDevice(((SetSelectDevEvent *)ev)->getDev());
+        return true;
     }
     return QMainWindow::event(ev);
 }

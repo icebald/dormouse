@@ -2,6 +2,8 @@
 #include "adb/adbhelper.h"
 #include <QDebug>
 #include <QStringList>
+#include <thread>
+#include <QProcess>
 
 device::device(const QString &name) : mSerialNumber(name) {
     QString cmd = QString(LIST_JDWP).arg(name);
@@ -20,4 +22,28 @@ void device::addProgress(QStringList &pids) {
         Progress progress(name, pids.at(i));
         mProgress.push_back(progress);
     }
+}
+
+void device::ReadyRead() {
+    qDebug()<<QString::fromLocal8Bit(mP->readAll());
+}
+
+void device::run() {
+    QString cmd = QString(LOGCAT).arg(mSerialNumber).arg(mProgress.at(mCurrentProgress).pid);
+    mP = new QProcess();
+    mP->start(cmd);
+    mP->waitForStarted();
+    mIsRun = true;
+    while (mIsRun) {
+        mP->waitForReadyRead(1000);
+        qDebug()<<QString::fromLocal8Bit(mP->readAll());
+    }
+}
+
+void device::stop() {
+    mIsRun = false;
+}
+
+void device::catLogcat() {
+    start();
 }

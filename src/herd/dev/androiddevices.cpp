@@ -9,7 +9,7 @@
 #include <QEvent>
 #include <QApplication>
 
-AndroidDevices::AndroidDevices(MainWindow *window) : mHwnd(window)
+AndroidDevices::AndroidDevices(MainWindow *window) : mHwnd(window), mIsRun(false)
 {
 
 }
@@ -50,14 +50,20 @@ void AndroidDevices::buildDevice(const QString &str) {
 }
 
 void AndroidDevices::run() {
+    mIsRun = true;
     QString version = AdbHelper::excue(GET_VERSION);
     QApplication::postEvent(mHwnd, new VersionEvent(version));
 
-    while (true) {
+    while (mIsRun) {
         mDevices.clear();
         buildDevice(AdbHelper::excue(LIST_DEVICE));
         std::this_thread::sleep_for(std::chrono::seconds(60));
     }
+}
+
+void AndroidDevices::stop() {
+    mIsRun = false;
+    this->exit(0);
 }
 
 void AndroidDevices::setSelectDev(int index) {
